@@ -61,7 +61,8 @@ on property:twrp.decrypt.done=true
     stop servicemanager
     stop hwservicemanager
 
-
+on boot
+    start vendor.boot-hal-1-1
 
 
 
