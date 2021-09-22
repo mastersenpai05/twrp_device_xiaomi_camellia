@@ -67,6 +67,7 @@ BOARD_KERNEL_TAGS_OFFSET := 0x07c08000
 BOARD_BOOTIMG_HEADER_VERSION := 2
 BOARD_INCLUDE_DTB_IN_BOOTIMG := true
 BOARD_KERNEL_IMAGE_NAME := kernel
+BOARD_RAMDISK_USE_LZ4 := true
 
 TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/kernel.gz
 TARGET_PREBUILT_DTB := $(DEVICE_PATH)/prebuilt/dtb.img
@@ -94,9 +95,7 @@ BOARD_MAIN_SIZE := 9126805504
 BOARD_MAIN_PARTITION_LIST := \
     product \
     system \
-    vendor \
-    system_ext \
-    odm
+    vendor
 
 # File system type
 BOARD_HAS_LARGE_FILESYSTEM := true
