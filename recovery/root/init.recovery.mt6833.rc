@@ -63,7 +63,7 @@ on property:twrp.decrypt.done=true
 
 on boot
     start boot-hal-1-1
-    staet wait_for_keymaster
+    start wait_for_keymaster
 
 service wait_for_keymaster /system/bin/wait_for_keymaster
     user root
