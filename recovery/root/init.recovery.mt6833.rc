@@ -1,5 +1,8 @@
 import /init.recovery.microtrust.rc
 
+on early-fs
+    start vold
+
 on fs
     install_keyring
     setprop crypto.ready 1
@@ -23,42 +26,50 @@ service gatekeeper-1-0 /vendor/bin/hw/android.hardware.gatekeeper@1.0-service
     disabled
     seclabel u:r:recovery:s0
 
-service keymaster-4-0 /vendor/bin/hw/android.hardware.keymaster@4.0-service.beanpod
+service vendor.keymaster-4-0 /vendor/bin/hw/android.hardware.keymaster@4.0-service.beanpod
     user root
     group root drmrpc
     disabled
     seclabel u:r:recovery:s0
 
 on property:vendor.sys.listener.registered=true
+    start vendor.keymaster-4-0
     start gatekeeper-1-0
     
 on property:hwservicemanager.ready=true
-    start keymaster-4-0
+    start vendor.keymaster-4-0
     start gatekeeper-1-0
 
 on property:ro.crypto.state=unsupported
     stop teei_daemon
-    stop keymaster-4-0
+    stop vendor.keymaster-4-0
     stop gatekeeper-1-0
     stop servicemanager
     stop hwservicemanager
 
 on property:ro.crypto.state=unencrypted
     stop teei_daemon
-    stop keymaster-4-0
+    stop vendor.keymaster-4-0
     stop gatekeeper-1-0
     stop servicemanager
     stop hwservicemanager
 
 on property:twrp.decrypt.done=true
     stop teei_daemon
-    stop keymaster-4-0
+    stop vendor.keymaster-4-0
     stop gatekeeper-1-0
     stop servicemanager
     stop hwservicemanager
 
 on boot
     start boot-hal-1-1
+    staet wait_for_keymaster
 
-
+service wait_for_keymaster /system/bin/wait_for_keymaster
+    user root
+    group root system
+    priority -20
+    ioprio rt 0
+    disabled
+    seclabel u:r:recovery:s0
 
