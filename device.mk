@@ -24,10 +24,8 @@ AB_OTA_POSTINSTALL_CONFIG += \
 
 # Boot control HAL
 PRODUCT_PACKAGES += \
-    android.hardware.boot@1.0-impl.recovery \
-    android.hardware.boot@1-0-impl \
-    android.hardware.boot@1.0 \
-    android.hardware.boot@1.0-service
+    android.hardware.boot@1.1-impl.recovery \
+    android.hardware.boot@1.impl
 
 PRODUCT_PACKAGES_DEBUG += \
     update_engine_client
