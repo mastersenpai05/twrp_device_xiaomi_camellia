@@ -1,5 +1,11 @@
 import /init.recovery.microtrust.rc
 
+on init
+    # Create a more standard /dev/block layout for our scripts
+    symlink /dev/block/platform/bootdevice /dev/block/bootdevice
+    mkdir /mnt/vendor/persist 0700 root root
+    mount ext4 /dev/block/platform/bootdevice/by-name/persist /mnt/vendor/persist
+
 on early-fs
     start vold
 
@@ -35,7 +41,7 @@ service vendor.keymaster-4-0 /vendor/bin/hw/android.hardware.keymaster@4.0-servi
 on property:vendor.sys.listener.registered=true
     start vendor.keymaster-4-0
     
-on property:crypto.ready=1
+on property:vendor.sys.listener.registered=true
     start gatekeeper-1-0
     
 on property:hwservicemanager.ready=true
