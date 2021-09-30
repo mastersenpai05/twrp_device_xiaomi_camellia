@@ -1,7 +1,7 @@
 LOCAL_PATH := device/xiaomi/camellia
 
 # Dynamic Partitions
-BOARD_USE_DYNAMIC_PARTITIONS := true
+PRODUCT_USE_DYNAMIC_PARTITIONS := true
 
 # VNDK
 PRODUCT_TARGET_VNDK_VERSION := 30
@@ -25,7 +25,7 @@ AB_OTA_POSTINSTALL_CONFIG += \
 # Boot control HAL
 PRODUCT_PACKAGES += \
     android.hardware.boot@1.1-impl.recovery \
-    android.hardware.boot@1.impl
+    android.hardware.boot@1.1impl
 
 PRODUCT_PACKAGES_DEBUG += \
     update_engine_client
