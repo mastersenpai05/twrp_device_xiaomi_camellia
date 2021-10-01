@@ -9,6 +9,8 @@ PRODUCT_TARGET_VNDK_VERSION := 30
 # API
 PRODUCT_SHIPPING_API_LEVEL := 30
 
+PRODUCT_PLATFORM := mt6833
+
 # DTB
 PRODUCT_COPY_FILES += $(call find-copy-subdir-files,*,$(LOCAL_PATH)/recovery/root,recovery/root) \
             $(LOCAL_PATH)/prebuilt/dtb.img:dtb.img
@@ -54,3 +56,5 @@ TW_OVERRIDE_SYSTEM_PROPS := \
 PRODUCT_SYSTEM_VERITY_PARTITION := /dev/block/bootdevice/by-name/system
 PRODUCT_VENDOR_VERITY_PARTITION := /dev/block/bootdevice/by-name/vendor
 PRODUCT_PRODUCT_VERITY_PARTITION := /dev/block/bootdevice/by-name/product
+PRODUCT_COPY_FILES += $(LOCAL_PATH)/fstab.mt6833:$(TARGET_COPY_OUT_RECOVERY)/root/first_stage_ramdisk/fstab.$(PRODUCT_PLATFORM)
+PRODUCT_COPY_FILES += $(LOCAL_PATH)/fstab.emmc:$(TARGET_COPY_OUT_RECOVERY)/root/first_stage_ramdisk/fstab.emmc
