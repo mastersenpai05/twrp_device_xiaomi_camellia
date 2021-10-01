@@ -125,7 +125,6 @@ BOARD_VNDK_VERSION := current
 BOARD_USE_MTK_HARDWARE := true
 
 # System as root
-BOARD_BUILD_SYSTEM_ROOT_IMAGE := true
 BOARD_SUPPRESS_SECURE_ERASE := true
 
 # Crypto
