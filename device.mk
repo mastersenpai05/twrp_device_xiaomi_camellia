@@ -47,3 +47,10 @@ PRODUCT_PACKAGES += \
     android.hardware.boot@2.1-service \
     android.hardware.boot@2.1-impl
 
+TW_OVERRIDE_SYSTEM_PROPS := \
+    "ro.build.product;ro.build.fingerprint;ro.build.version.incremental;ro.product.device=ro.product.system.device;ro.product.model=ro.product.system.model;ro.product.name=ro.product.system.name"
+
+# Mount Partition Early
+PRODUCT_SYSTEM_VERITY_PARTITION := /dev/block/bootdevice/by-name/system
+PRODUCT_VENDOR_VERITY_PARTITION := /dev/block/bootdevice/by-name/vendor
+PRODUCT_PRODUCT_VERITY_PARTITION := /dev/block/bootdevice/by-name/product
