@@ -5,16 +5,7 @@ on init
     symlink /dev/block/platform/bootdevice /dev/block/bootdevice
     mkdir /mnt/vendor/persist 0700 root root
     mount ext4 /dev/block/platform/bootdevice/by-name/persist /mnt/vendor/persist
-    export PATH /sbin:/system/bin:/vendor/bin:vendor/bin/hw
-    export ANDROID_ROOT /system:/vendor
-    export ANDROID_DATA /data
-    export EXTERNAL_STORAGE /sdcard
-    export LD_LIBRARY_PATH /system/lib64/hw/:/system/lib64:/vendor/lib64/hw:/vendor/lib64:/sbin
-
-
-on early-fs
-    start vold
-
+   
 on fs
     install_keyring
     setprop crypto.ready 1
@@ -44,8 +35,11 @@ service vendor.keymaster-4-0 /vendor/bin/hw/android.hardware.keymaster@4.0-servi
     disabled
     seclabel u:r:recovery:s0
 
+on propert:vendor.sys.listener.registered=true
+    start keymaster-4-0
+    stop gatekeeper-1-0
+
 on property:hwservicemanager.ready=true
-    start vendor.keymaster-4-0
     start gatekeeper-1-0
 
 on property:ro.crypto.state=unsupported
