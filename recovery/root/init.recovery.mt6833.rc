@@ -67,7 +67,7 @@ service vendor.keymaster-4-0 /vendor/bin/hw/android.hardware.keymaster@4.0-servi
     disabled
     seclabel u:r:recovery:s0
 
-on propert:vendor.sys.listener.registered=true
+on property:vendor.sys.listener.registered=true
     start keymaster-4-0
     stop gatekeeper-1-0
 
