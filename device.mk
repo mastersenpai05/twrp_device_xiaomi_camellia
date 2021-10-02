@@ -27,7 +27,7 @@ AB_OTA_POSTINSTALL_CONFIG += \
 # Boot control HAL
 PRODUCT_PACKAGES += \
     android.hardware.boot@1.1-impl.recovery \
-    android.hardware.boot@1.1impl
+    android.hardware.boot@1.1-impl
 
 PRODUCT_PACKAGES_DEBUG += \
     update_engine_client
@@ -46,8 +46,8 @@ PRODUCT_PACKAGES += \
 
 # health Hal
 PRODUCT_PACKAGES += \
-    android.hardware.boot@2.1-service \
-    android.hardware.boot@2.1-impl
+    android.hardware.health@2.1-service \
+    android.hardware.health@2.1-impl
 
 TW_OVERRIDE_SYSTEM_PROPS := \
     "ro.build.product;ro.build.fingerprint;ro.build.version.incremental;ro.product.device=ro.product.system.device;ro.product.model=ro.product.system.model;ro.product.name=ro.product.system.name"
