@@ -1,94 +1,120 @@
 #!/sbin/sh
-# TWRP A/B Installer Backend
-# by osm0sis, Dees_Troy and topjohnwu
 
-OUTFD=/proc/self/fd/$2;
-ZIPFILE="$3";
+OUTFD=$2
+if [ -n "$2" ];then
+  readlink /proc/$$/fd/$OUTFD 2>/dev/null | grep /tmp >/dev/null
+  if [ "$?" -eq "0" ]; then
+    # rerouted to log file, we don't want our ui_print commands going there
+    OUTFD=0
 
-ui_print() {
-  if $BOOTMODE; then
-    echo "$1";
-  else
-    echo -e "ui_print $1\nui_print" >> $OUTFD;
-  fi;
-}
-abort() { ui_print "$1"; exit 1; }
-
-# detect Magisk Manager/booted flashing
-BOOTMODE=false;
-ps | grep zygote | grep -v grep >/dev/null && BOOTMODE=true;
-$BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMODE=true;
-
-ui_print "###############################################";
-ui_print "#    TWRP installer for Xiaomi Camellia.      #";
-ui_print "#           by: MASTERSENPAI05                #";
-ui_print "#  source from osmosis, dees_troy, topjohnwu  #";
-ui_print "#     THANK YOU! THANK YOU! THANK YOU!        #";
-ui_print "##############################################$";
-ui_print " ";
-
-# /dev/tmp is safe for both booted and recovery installs
-tmp=/dev/tmp/twrp-install;
-# target partition without the slot suffix
-if [ -e /dev/block/bootdevice/by-name/recovery_b ]; then
-  target=/dev/block/bootdevice/by-name/recovery;
+    # we are probably running in embedded mode, see if we can find the right fd
+    # we know the fd is a pipe and that the parent updater may have been started as
+    # 'update-binary 3 fd zipfile'
+    for FD in `ls /proc/$$/fd`; do
+      readlink /proc/$$/fd/$FD 2>/dev/null | grep pipe >/dev/null
+      if [ "$?" -eq "0" ]; then
+        ps | grep " 3 $FD " | grep -v grep >/dev/null
+        if [ "$?" -eq "0" ]; then
+          OUTFD=$FD
+          break
+        fi
+      fi
+    done
+  fi
+  ui_print() {
+    echo -n -e "ui_print $1\n" >> /proc/self/fd/$OUTFD
+    echo -n -e "ui_print\n" >> /proc/self/fd/$OUTFD
+  }
 else
-  target=/dev/block/bootdevice/by-name/boot;
-fi;
-name=$(basename $target);
+  ui_print() {
+    echo "$1"
+  }
+fi
 
-ui_print "Unpacking the installer...";
-ui_print " ";
-rm -rf $tmp;
-mkdir -p $tmp;
-unzip -o "$ZIPFILE" -d $tmp || abort "Failed to extract zip!";
+# find_block [partname...]
+find_block() {
+  local BLOCK DEV DEVICE DEVNAME PARTNAME UEVENT
+  for BLOCK in "$@"; do
+    DEVICE=`find /dev/block \( -type b -o -type c -o -type l \) -iname $BLOCK | head -n 1` 2>/dev/null
+    if [ ! -z $DEVICE ]; then
+      readlink -f $DEVICE
+      return 0
+    fi
+  done
 
-cd $tmp;
-recoverycpio=`(ls ramdisk-twrp.cpio || ls ramdisk-recovery.cpio) 2>/dev/null`;
-recoveryimg=`(ls twrp*.img || ls TWRP*.img || ls recovery.img) 2>/dev/null`;
-[ "$recoverycpio" ] || [ "$recoveryimg" ] || abort "No TWRP ramdisk/image found in zip!";
+  return 1
+}
 
-tool=$tmp/magiskboot;
-chmod 755 $tool;
 
-for slot in _a _b; do
-  if [ "$recoverycpio" ]; then
-    ui_print "Running image patcher on $name$slot...";
-    dd bs=1048576 if=$target$slot of=boot.img || abort "Failed to dump image!";
-    $tool unpack -h boot.img || abort "Failed to unpack image!";
 
-    # kernel string want_initramfs -> skip_initramfs (Magisk)
-    $tool hexpatch kernel 77616E745F696E697472616D6673 736B69705F696E697472616D6673;
-    # kernel string trip_initramfs -> skip_initramfs (SuperSU)
-    $tool hexpatch kernel 747269705F696E697472616D6673 736B69705F696E697472616D6673;
+grep_cmdline() {
+  local REGEX="s/^$1=//p"
+  cat /proc/cmdline | tr '[:space:]' '\n' | sed -n "$REGEX" 2>/dev/null
+}
 
-    # boot.img header cmdline remove skip_override (flar2 patch)
-    sed -i "s|$(grep '^cmdline=' header | cut -d= -f2-)|$(grep '^cmdline=' header | cut -d= -f2- | sed -e 's/skip_override//' -e 's/  */ /g' -e 's/[ \t]*$//')|" header;
 
-    cp -f $recoverycpio ramdisk.cpio;
-    $tool repack boot.img || abort "Failed to repack image!";
-    $tool cleanup;
+find_boot_image() {
+  BOOTIMAGE=
+  # Check A/B slot
+  SLOT=`grep_cmdline androidboot.slot_suffix`
+  if [ -z $SLOT ]; then
+    SLOT=`grep_cmdline androidboot.slot`
+    [ -z $SLOT ] || SLOT=_${SLOT}
+  fi
+  [ -z $SLOT ] || ui_print "- Current boot slot: $SLOT"
+
+  BOOTIMAGE=`find_block ramdisk$SLOT recovery_ramdisk$SLOT boot$SLOT`
+	if  [ $SLOT = "_a" ]; then
+	    BOOTIMAGE2=`find_block ramdisk_b recovery_ramdisk_b boot_b`
+	elif [ $SLOT = "_b" ]; then
+	    BOOTIMAGE2=`find_block ramdisk_a recovery_ramdisk_a boot_a`
+	fi
+
+}
+
+flash_image() {
+  case "$1" in
+    *.gz) CMD1="gzip -d < '$1' 2>/dev/null";;
+    *)    CMD1="cat '$1'";;
+  esac
+  CMD2="cat -"
+  if [ -b "$2" ]; then
+    local img_sz=$(stat -c '%s' "$1")
+    local blk_sz=$(blockdev --getsize64 "$2")
+    [ "$img_sz" -gt "$blk_sz" ] && return 1
+    blockdev --setrw "$2"
+    local blk_ro=$(blockdev --getro "$2")
+    [ "$blk_ro" -eq 1 ] && return 2
+    eval "$CMD1" | eval "$CMD2" | cat - /dev/zero > "$2" 2>/dev/null
+ 
   else
-    ui_print "Flashing image to $name$slot...";
-    cp -f $recoveryimg new-boot.img;
-  fi;
+    ui_print "- Not block or char device, storing image"
 
-  blockdev --setrw $target$slot;
-  cat new-boot.img /dev/zero > $target$slot 2>/dev/null || true;
-  rm -f new-boot.img;
-done;
+  fi
+  return 0
+}
 
-if [ "$recoverycpio" ]; then
-  ui_print " ";
-  ui_print "Image patching complete!";
-fi;
+senpai_envsetup(){
+	if [ -d /tmp/senpai_twrp_patch ];then
+		rm -rf /tmp/senpai_twrp_patch
+	fi
+	mkdir -p /tmp/senpai_twrp_patch/origboot
+	bootdir=/tmp/senpai_twrp_patch/origboot
+}
 
-cd /;
-rm -rf /dev/tmp;
+ui_print "########################################";
+ui_print "    TWRP INSTALLER FOR CAMELLIA         ";
+ui_print "        By: MASTERSENPAI05              ";
+ui_print "########################################";
 
-ui_print " ";
-ui_print "Done! Enjoy TWRP!";
-if [ "$name" != "recovery" ]; then
-  ui_print " ";
-  ui_print "*** NOTE: You are now unrooted! ***";
-fi;
+senpai_envsetup
+find_boot_image
+cd $bootdir
+ui_print "HELLO WORLD";
+magiskboot unpack "$BOOTIMAGE2"
+cp -rf /sbin/senpai_twrp_ramdisk.cpio ramdisk.cpio
+magiskboot cpio ramdisk.cpio "add 0644 sbin/senpai_twrp_ramdisk.cpio /sbin/senpai_twrp_ramdisk.cpio"
+magiskboot repack $BOOTIMAGE2 patch_twrp_boot.img
+flash_image patch_twrp_boot.img $BOOTIMAGE
+ui_print "FLASH DONE!";
+rm -rf /tmp/senpai_twrp_patch
